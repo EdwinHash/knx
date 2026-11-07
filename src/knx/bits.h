@@ -3,79 +3,15 @@
 #include <cstddef>
 #include <cstdint>
 
-#if defined(__linux__)
-    #include <arpa/inet.h>
-#elif defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_STM32) || defined (DeviceFamily_CC13X0)
-    #define getbyte(x,n) (*(((uint8_t*)&(x))+n))
-    #define htons(x)  ( (getbyte(x,0)<<8) | getbyte(x,1) )
-    #define htonl(x) ( (getbyte(x,0)<<24) | (getbyte(x,1)<<16) | (getbyte(x,2)<<8) | getbyte(x,3) )
-    #define ntohs(x) htons(x)
-    #define ntohl(x) htonl(x)
-#elif defined(LIBRETINY)
-    #include <lwip/udp.h>
-    #define htons(x) lwip_htons(x)
-    #define htonl(x) lwip_htonl(x)
-#endif
+#define getbyte(x,n) (*(((uint8_t*)&(x))+n))
+#define htons(x)  ( (getbyte(x,0)<<8) | getbyte(x,1) )
+#define htonl(x) ( (getbyte(x,0)<<24) | (getbyte(x,1)<<16) | (getbyte(x,2)<<8) | getbyte(x,3) )
+#define ntohs(x) htons(x)
+#define ntohl(x) htonl(x)
 
-#if defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_STM32) || defined(LIBRETINY)
-    #include <Arduino.h>
-#elif defined(ARDUINO_ARCH_ESP8266)
-    #include <Arduino.h>
-    #include <user_interface.h>
-#elif defined(ARDUINO_ARCH_ESP32)
-    #include <Arduino.h>
-    #include <esp_wifi.h>
-#elif defined(ESP_PLATFORM)
-    #include <lwip/inet.h>
-    #include <driver/gpio.h>
-    // // Define Arduino-like macros if needed for compatibility
-
-    #define lowByte(val) ((val)&255)
-    #define highByte(val) (((val) >> ((sizeof(val) - 1) << 3)) & 255)
-    #define bitRead(val, bitno) (((val) >> (bitno)) & 1)
-    #define DEC 10
-    #define HEX 16
-    #define OCT  8
-    #define BIN  2
-    #define LOW  0
-    #define HIGH 1
-    #define CHANGE GPIO_INTR_ANYEDGE
-    #define FALLING GPIO_INTR_NEGEDGE
-    #define RISING GPIO_INTR_POSEDGE
-    // Implement or map Arduino-like functions if needed
-    uint32_t millis();
-    typedef void (*IsrFuncPtr)(void); // Arduino-style
-    typedef void (*EspIsrFuncPtr)(void*); // ESP-IDF-style
-    void attachInterrupt(uint32_t pin, IsrFuncPtr callback, uint32_t mode);
-#else // Non-Arduino platforms
-    #define lowByte(val) ((val)&255)
-    #define highByte(val) (((val) >> ((sizeof(val) - 1) << 3)) & 255)
-    #define bitRead(val, bitno) (((val) >> (bitno)) & 1)
-
-    // print functions are implemented in the platform files
-    #define DEC 10
-    #define HEX 16
-
-    #define INPUT (0x0)
-    #define OUTPUT (0x1)
-    #define INPUT_PULLUP (0x2)
-    #define INPUT_PULLDOWN (0x3)
-
-    #define LOW (0x0)
-    #define HIGH (0x1)
-    #define CHANGE 2
-    #define FALLING 3
-    #define RISING 4
-
-    void delay(uint32_t millis);
-    void delayMicroseconds (unsigned int howLong);
-    uint32_t millis();
-    void pinMode(uint32_t dwPin, uint32_t dwMode);
-    void digitalWrite(uint32_t dwPin, uint32_t dwVal);
-    uint32_t digitalRead(uint32_t dwPin);
-    typedef void (*voidFuncPtr)(void);
-    void attachInterrupt(uint32_t pin, voidFuncPtr callback, uint32_t mode);
-#endif
+#define lowByte(val) ((val)&255)
+#define highByte(val) (((val) >> ((sizeof(val) - 1) << 3)) & 255)
+#define bitRead(val, bitno) (((val) >> (bitno)) & 1)
 
 #ifndef MIN
     #define MIN(a, b) ((a < b) ? (a) : (b))
@@ -89,36 +25,10 @@
     #define ABS(x)    ((x > 0) ? (x) : (-x))
 #endif
 
-#ifndef KNX_NO_PRINT
-    void print(const char[]);
-    void print(char);
-    void print(unsigned char, int = DEC);
-    void print(int, int = DEC);
-    void print(unsigned int, int = DEC);
-    void print(long, int = DEC);
-    void print(unsigned long, int = DEC);
-    void print(long long, int = DEC);
-    void print(unsigned long long, int = DEC);
-    void print(double);
-
-    void println(const char[]);
-    void println(char);
-    void println(unsigned char, int = DEC);
-    void println(int, int = DEC);
-    void println(unsigned int, int = DEC);
-    void println(long, int = DEC);
-    void println(unsigned long, int = DEC);
-    void println(long long, int = DEC);
-    void println(unsigned long long, int = DEC);
-    void println(double);
-    void println(void);
-
-    void printHex(const char* suffix, const uint8_t* data, size_t length, bool newline = true);
-#else
-    #define print(...)      do {} while(0)
-    #define println(...)    do {} while(0)
-    #define printHex(...)   do {} while(0)
-#endif
+// заглушка временно для отладки, чтобы не было ошибок при компиляции 
+#define print(...)      do {} while(0)
+#define println(...)    do {} while(0)
+#define printHex(...)   do {} while(0)
 
 #ifdef KNX_ACTIVITYCALLBACK
     #define KNX_ACTIVITYCALLBACK_DIR 0x00
@@ -152,10 +62,3 @@ enum ParameterFloatEncodings
     Float_Enc_IEEE754Double = 2, // 8 Byte. C++ double
 };
 
-
-#if defined(ARDUINO_ARCH_SAMD)
-    // temporary undef until framework-arduino-samd > 1.8.9 is released. See https://github.com/arduino/ArduinoCore-samd/pull/399 for a PR should will probably address this
-    #undef max
-    #undef min
-    // end of temporary undef
-#endif

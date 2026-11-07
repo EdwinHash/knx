@@ -8,6 +8,8 @@
 #include "device_object.h"
 #include "platform.h"
 #include "tpuart_data_link_layer.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 /*
  * A new implementation of the tpuart connection.
@@ -192,7 +194,7 @@ void TpUartDataLinkLayer::processRxByte()
      * and there are no more bytes in the buffer,
      * then I can discard the INVALID state.
      */
-    if (_rxState == RX_INVALID && (millis() - _rxLastTime) > 2 && !_platform.uartAvailable())
+    if (_rxState == RX_INVALID && (xTaskGetTickCount() - _rxLastTime) > 2 && !_platform.uartAvailable())
     {
         processRxFrameComplete();
         _rxState = RX_IDLE;
@@ -340,7 +342,7 @@ void TpUartDataLinkLayer::processRxByte()
         }
     }
 
-    _rxLastTime = millis();
+    _rxLastTime = xTaskGetTickCount();
 }
 
 /*
@@ -627,7 +629,7 @@ void TpUartDataLinkLayer::requestState(bool force /* = false */)
             return;
 
         // Only 1x per second
-        if ((millis() - _lastStateRequest) < 1000)
+        if ((xTaskGetTickCount() - _lastStateRequest) < 1000)
             return;
     }
 
@@ -643,7 +645,7 @@ void TpUartDataLinkLayer::requestState(bool force /* = false */)
     if (!_monitoring)
         _platform.writeUart(U_STATE_REQ);
 
-    _lastStateRequest = millis();
+    _lastStateRequest = xTaskGetTickCount();
 }
 
 /*
@@ -764,7 +766,7 @@ bool TpUartDataLinkLayer::reset()
     _platform.writeUart(U_RESET_REQ);
     bool success = false;
 
-    const uint32_t start = millis();
+    const uint32_t start = xTaskGetTickCount();
 
     // During startup answer took up to 2ms and normal 1ms
     do
@@ -779,7 +781,7 @@ bool TpUartDataLinkLayer::reset()
             success = true;
             break; // next run for U_CONFIGURE_IND
         }
-    } while (!((millis() - start) >= 10));
+    } while (!((xTaskGetTickCount() - start) >= 10));
 
     connected(success);
 
@@ -787,7 +789,7 @@ bool TpUartDataLinkLayer::reset()
     {
         _lastStateRequest = 0; // Force
         requestState(true);
-        _rxLastTime = millis();
+        _rxLastTime = xTaskGetTickCount();
     }
 
     isrUnlock();
@@ -854,7 +856,7 @@ bool TpUartDataLinkLayer::enabled() const
  */
 void TpUartDataLinkLayer::clearOutdatedTxFrame()
 {
-    if (_txState == TX_FRAME && (millis() - _txLastTime) > 1000)
+    if (_txState == TX_FRAME && (xTaskGetTickCount() - _txLastTime) > 1000)
         processTxFrameComplete(false);
 }
 
@@ -887,7 +889,7 @@ void TpUartDataLinkLayer::processTxQueue()
         delete entry;
 
         _txState = TX_FRAME;
-        _txLastTime = millis();
+        _txLastTime = xTaskGetTickCount();
 
 #ifdef DEBUG_TP_FRAMES
         print("Outbound: ");
@@ -910,7 +912,7 @@ void TpUartDataLinkLayer::checkConnected()
     if (!isrLock())
         return;
 
-    const uint32_t current = millis();
+    const uint32_t current = xTaskGetTickCount();
 
     if (_connected)
     {

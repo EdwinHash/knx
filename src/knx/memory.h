@@ -10,7 +10,8 @@
 #define MAXTABLEOBJ 4
 
 #ifndef KNX_FLASH_SIZE
-    #define KNX_FLASH_SIZE 1024
+    //#define KNX_FLASH_SIZE 1024
+    #error "KNX_FLASH_SIZE is not defined. Please define it in Target/config.cmake"
 #endif
 
 class MemoryBlock

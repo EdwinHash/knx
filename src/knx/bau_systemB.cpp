@@ -1,5 +1,7 @@
 #include "bau_systemB.h"
 #include "bits.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -640,7 +642,7 @@ void BauSystemB::connectConfirm(uint16_t tsap)
     {
         /* restart connection is confirmed, go to the next state */
         _restartState = Connected;
-        _restartDelay = millis();
+        _restartDelay = xTaskGetTickCount();
     }
     else
     {
@@ -663,11 +665,11 @@ void BauSystemB::nextRestartState()
         case Connected:
 
             /* connection confirmed, we send restartRequest, but we wait a moment (sending ACK etc)... */
-            if (millis() - _restartDelay > 30)
+            if (xTaskGetTickCount() - _restartDelay > 30)
             {
                 applicationLayer().restartRequest(AckRequested, SystemPriority, NetworkLayerParameter, _restartSecurity);
                 _restartState = Restarted;
-                _restartDelay = millis();
+                _restartDelay = xTaskGetTickCount();
             }
 
             break;
@@ -675,7 +677,7 @@ void BauSystemB::nextRestartState()
         case Restarted:
 
             /* restart is finished, we send a disconnect */
-            if (millis() - _restartDelay > 30)
+            if (xTaskGetTickCount() - _restartDelay > 30)
             {
                 applicationLayer().disconnectRequest(SystemPriority);
                 _restartState = Idle;

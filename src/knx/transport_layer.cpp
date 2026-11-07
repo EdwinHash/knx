@@ -5,6 +5,8 @@
 #include "application_layer.h"
 #include "platform.h"
 #include "bits.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <stdio.h>
 
 TransportLayer::TransportLayer(ApplicationLayer& layer): _savedFrame(0),
@@ -607,7 +609,7 @@ uint16_t TransportLayer::getConnectionAddress()
 
 void TransportLayer::loop()
 {
-    uint32_t milliseconds = millis();
+    uint32_t milliseconds = xTaskGetTickCount();
 
     if (_connectionTimeoutEnabled
             && (milliseconds - _connectionTimeoutStartMillis) > _connectionTimeoutMillis)
@@ -778,7 +780,7 @@ void TransportLayer::A15(Priority priority, uint16_t tsap)
 
 void TransportLayer::enableConnectionTimeout()
 {
-    _connectionTimeoutStartMillis = millis();
+    _connectionTimeoutStartMillis = xTaskGetTickCount();
     _connectionTimeoutEnabled = true;
 }
 
@@ -789,7 +791,7 @@ void TransportLayer::disableConnectionTimeout()
 
 void TransportLayer::enableAckTimeout()
 {
-    _ackTimeoutStartMillis = millis();
+    _ackTimeoutStartMillis = xTaskGetTickCount();
     _ackTimeoutEnabled = true;
 }
 

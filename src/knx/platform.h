@@ -3,11 +3,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "save_restore.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 #ifndef KNX_FLASH_CALLBACK
     #ifndef KNX_FLASH_SIZE
         #define KNX_FLASH_SIZE 1024
-        #pragma warning "KNX_FLASH_SIZE not defined, using 1024"
+        #warning "KNX_FLASH_SIZE not defined, using 1024"
     #endif
 #endif
 
@@ -20,6 +22,12 @@
     typedef uint32_t (*FlashCallbackWrite)(uint32_t relativeAddress, uint8_t* buffer, size_t len);
     typedef void (*FlashCallbackCommit)();
 #endif
+
+// BAU task handle
+extern TaskHandle_t hBauTask;
+// flags using within BAU task notification
+#define FL_TOGGLE_PROG_MODE     (1 << 0)    // Prog button pressed
+#define FL_TP1_SAVE_TRIGGER     (1 << 1)    // Save signal triggered
 
 enum NvMemoryType
 {
@@ -39,11 +47,14 @@ class Platform
         virtual void macAddress(uint8_t* data);
 
         // unique serial number
-        virtual uint32_t uniqueSerialNumber();
+        virtual uint32_t uniqueSerialNumber() { return 0x01020304; }
 
         // basic stuff
         virtual void restart() = 0;
         virtual void fatalError() = 0;
+        // ProgLED
+        virtual void progLedOn() {}
+        virtual void progLedOff() {}
 
         //multicast socket
         virtual void setupMultiCast(uint32_t addr, uint16_t port);
@@ -65,6 +76,10 @@ class Platform
         virtual size_t readBytesUart(uint8_t* buffer, size_t length);
         virtual bool overflowUart();
         virtual void flushUart();
+    
+    #ifdef USE_TP
+        virtual bool getTpChipSave() = 0;
+    #endif /* USE_TP */
 
         // SPI
         virtual void setupSpi();
@@ -111,6 +126,8 @@ class Platform
         FlashCallbackWrite callbackFlashWrite();
         FlashCallbackCommit callbackFlashCommit();
 #endif
+        // should reduce power consumption
+        virtual void powerSave() {}
 
     protected:
         // size of one EraseBlock in pages

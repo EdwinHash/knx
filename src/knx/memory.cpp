@@ -1,7 +1,7 @@
 #include "memory.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
-
 #include "bits.h"
 
 Memory::Memory(Platform& platform, DeviceObject& deviceObject)
@@ -301,7 +301,7 @@ void Memory::freeMemory(uint8_t* ptr)
 
     removeFromUsedList(block);
     addToFreeList(block);
-    _saveTimeout = millis();
+    _saveTimeout = xTaskGetTickCount();
     if (_saveTimeout == 0)
         _saveTimeout = 1; // prevent 0=disabled; no impact by minimal increased timeout
 }
@@ -310,7 +310,7 @@ void Memory::writeMemory(uint32_t relativeAddress, size_t size, uint8_t* data)
 {
     if(_saveTimeout != 0)
     {
-        _saveTimeout = millis();
+        _saveTimeout = xTaskGetTickCount();
         if (_saveTimeout == 0)
             _saveTimeout = 1; // prevent 0=disabled; no impact by minimal increased timeout
     }
@@ -553,7 +553,7 @@ VersionCheckCallback Memory::versionCheckCallback()
 
 void Memory::loop()
 {
-    if(_saveTimeout != 0 && millis() - _saveTimeout > 5000)
+    if(_saveTimeout != 0 && xTaskGetTickCount() - _saveTimeout > 5000)
     {
         println("saveMemory timeout");
         _saveTimeout = 0;
