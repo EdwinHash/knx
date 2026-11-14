@@ -181,4 +181,5 @@ class BusAccessUnit
         virtual FunctionPropertyCallback functionPropertyCallback();
         virtual void functionPropertyStateCallback(FunctionPropertyCallback func);
         virtual FunctionPropertyCallback functionPropertyStateCallback();
+        virtual bool isTxQueueFull();
 };

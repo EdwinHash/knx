@@ -1,5 +1,6 @@
 #pragma once
 
+#include "platform_config.h"
 #include <stdint.h>
 #include <stddef.h>
 #include "save_restore.h"
@@ -25,7 +26,7 @@
 
 // BAU task handle
 extern TaskHandle_t hBauTask;
-// flags using within BAU task notification
+// flags for BAU task notification
 #define FL_TOGGLE_PROG_MODE     (1 << 0)    // Prog button pressed
 #define FL_TP1_SAVE_TRIGGER     (1 << 1)    // Save signal triggered
 
@@ -40,11 +41,22 @@ class Platform
 {
     public:
         virtual ~Platform() {}
+        
+    #ifdef USE_IP
         // ip config
         virtual uint32_t currentIpAddress();
         virtual uint32_t currentSubnetMask();
         virtual uint32_t currentDefaultGateway();
         virtual void macAddress(uint8_t* data);
+        //multicast socket
+        virtual void setupMultiCast(uint32_t addr, uint16_t port);
+        virtual void closeMultiCast();
+        virtual bool sendBytesMultiCast(uint8_t* buffer, uint16_t len);
+        virtual int readBytesMultiCast(uint8_t* buffer, uint16_t maxLen);
+        virtual int readBytesMultiCast(uint8_t* buffer, uint16_t maxLen, uint32_t& src_addr, uint16_t& src_port);
+        //unicast socket
+        virtual bool sendBytesUniCast(uint32_t addr, uint16_t port, uint8_t* buffer, uint16_t len);
+    #endif
 
         // unique serial number
         virtual uint32_t uniqueSerialNumber() { return 0x01020304; }
@@ -56,35 +68,29 @@ class Platform
         virtual void progLedOn() {}
         virtual void progLedOff() {}
 
-        //multicast socket
-        virtual void setupMultiCast(uint32_t addr, uint16_t port);
-        virtual void closeMultiCast();
-        virtual bool sendBytesMultiCast(uint8_t* buffer, uint16_t len);
-        virtual int readBytesMultiCast(uint8_t* buffer, uint16_t maxLen);
-        virtual int readBytesMultiCast(uint8_t* buffer, uint16_t maxLen, uint32_t& src_addr, uint16_t& src_port);
-
-        //unicast socket
-        virtual bool sendBytesUniCast(uint32_t addr, uint16_t port, uint8_t* buffer, uint16_t len);
-
+    #ifdef USE_BCU_UART
         //UART
-        virtual void setupUart();
-        virtual void closeUart();
-        virtual int uartAvailable();
-        virtual size_t writeUart(const uint8_t data);
-        virtual size_t writeUart(const uint8_t* buffer, size_t size);
-        virtual int readUart();
-        virtual size_t readBytesUart(uint8_t* buffer, size_t length);
-        virtual bool overflowUart();
-        virtual void flushUart();
-    
+        virtual void setupUart(UartType uart);
+        virtual void closeUart(UartType uart);
+        virtual int uartAvailable(UartType uart);
+        virtual size_t writeUart(UartType uart, const uint8_t data);
+        virtual size_t writeUart(UartType uart, const uint8_t* buffer, size_t size);
+        virtual int readUart(UartType uart);
+        virtual size_t readBytesUart(UartType uart, uint8_t* buffer, size_t length);
+        virtual bool overflowUart(UartType uart);
+        virtual void flushUart(UartType uart);
+    #endif /* USE_BCU_UART */
+
+    #ifdef USE_BCU_SPI
+        // SPI
+        virtual void setupSpi(SpiType spi);
+        virtual void closeSpi(SpiType spi);
+        virtual int readWriteSpi(SpiType spi, uint8_t* data, size_t len);
+    #endif /* USE_BCU_SPI */
+
     #ifdef USE_TP
         virtual bool getTpChipSave() = 0;
     #endif /* USE_TP */
-
-        // SPI
-        virtual void setupSpi();
-        virtual void closeSpi();
-        virtual int readWriteSpi(uint8_t* data, size_t len);
 
         //Memory
 
@@ -141,9 +147,7 @@ class Platform
         //write a single page to flash (pageNumber relative to userFashStart
         virtual void flashWritePage(uint16_t pageNumber, uint8_t* data);
 
-
         // -------------------------------------------------------------------------------------------------------
-
         NvMemoryType _memoryType = Eeprom;
 
         void loadEraseblockContaining(uint32_t relativeAddress);

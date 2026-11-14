@@ -65,7 +65,7 @@ InterfaceObject* Bau57B0::getInterfaceObject(uint8_t idx)
             return &_groupObjTable;
 
         case 4:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case 5: // would be app_program 2
             return nullptr;
@@ -115,7 +115,7 @@ InterfaceObject* Bau57B0::getInterfaceObject(ObjectType objectType, uint16_t obj
             return &_groupObjTable;
 
         case OT_APPLICATION_PROG:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case OT_IP_PARAMETER:
             return &_ipParameters;

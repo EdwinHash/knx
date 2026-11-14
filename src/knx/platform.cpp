@@ -15,73 +15,80 @@ void Platform::NonVolatileMemoryType(NvMemoryType type)
     _memoryType = type;
 }
 
-void Platform::setupSpi()
+#ifdef USE_BCU_SPI
+void Platform::setupSpi(SpiType spi)
 {}
 
-void Platform::closeSpi()
+void Platform::closeSpi(SpiType spi)
 {}
 
-int Platform::readWriteSpi(uint8_t* data, size_t len)
+int Platform::readWriteSpi(SpiType spi, uint8_t* data, size_t len)
+{
+    return 0;
+}
+#endif /* USE_BCU_SPI */
+
+#ifdef USE_BCU_UART
+size_t Platform::readBytesUart(UartType uart, uint8_t* buffer, size_t length)
 {
     return 0;
 }
 
-size_t Platform::readBytesUart(uint8_t* buffer, size_t length)
-{
-    return 0;
-}
-
-int Platform::readUart()
+int Platform::readUart(UartType uart)
 {
     return -1;
 }
 
-size_t Platform::writeUart(const uint8_t* buffer, size_t size)
+size_t Platform::writeUart(UartType uart, const uint8_t* buffer, size_t size)
 {
     return 0;
 }
 
-size_t Platform::writeUart(const uint8_t data)
+size_t Platform::writeUart(UartType uart, const uint8_t data)
 {
     return 0;
 }
 
-int Platform::uartAvailable()
+int Platform::uartAvailable(UartType uart)
 {
     return 0;
 }
 
-void Platform::closeUart()
+void Platform::closeUart(UartType uart)
 {}
 
-void Platform::setupUart()
+void Platform::setupUart(UartType uart)
 {}
 
-bool Platform::overflowUart()
+bool Platform::overflowUart(UartType uart)
 {
     return false;
 }
 
-void Platform::flushUart()
+void Platform::flushUart(UartType uart)
 {}
+#endif /* USE_BCU_UART */
 
+#ifdef USE_IP
 uint32_t Platform::currentIpAddress()
 {
-    return 0x01020304;
+    return 0xA9FE0101; // ip = 169.254.1.1
 }
 
 uint32_t Platform::currentSubnetMask()
 {
-    return 0;
+    return 0xFFFF0000; // mask = 255.255.0.0
 }
 
 uint32_t Platform::currentDefaultGateway()
 {
-    return 0;
+    return 0xA9FE0001; // GW = 169.254.0.1
 }
 
 void Platform::macAddress(uint8_t* data)
-{}
+{
+    (void)data;
+}
 
 void Platform::setupMultiCast(uint32_t addr, uint16_t port)
 {}
@@ -108,6 +115,7 @@ int Platform::readBytesMultiCast(uint8_t* buffer, uint16_t maxLen, uint32_t& src
 {
     return readBytesMultiCast(buffer, maxLen);
 }
+#endif /* USE_IP */
 
 size_t Platform::flashEraseBlockSize()
 {

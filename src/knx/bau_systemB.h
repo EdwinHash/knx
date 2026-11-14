@@ -17,6 +17,7 @@ class BauSystemB : protected BusAccessUnit
     public:
         BauSystemB(Platform& platform);
         virtual void loop() = 0;
+        virtual void rtosInitialize() = 0;
         virtual bool configured() = 0;
         virtual bool enabled() = 0;
         virtual void enabled(bool value) = 0;
@@ -28,7 +29,7 @@ class BauSystemB : protected BusAccessUnit
         Memory& memory();
         void readMemory();
         void writeMemory();
-        void addSaveRestore(SaveRestore* obj);
+        void addSaveRestore(InterfaceObject* obj);
 
         bool restartRequest(uint16_t asap, const SecurityControl secCtrl);
         uint8_t checkmasterResetValidity(EraseCode eraseCode, uint8_t channel);
@@ -122,7 +123,7 @@ class BauSystemB : protected BusAccessUnit
 
         Memory _memory;
         DeviceObject _deviceObj;
-        ApplicationProgramObject _appProgram;
+        ApplicationProgramObject _appProgramObj;
         Platform& _platform;
         RestartState _restartState = Idle;
         SecurityControl _restartSecurity;

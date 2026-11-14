@@ -1,9 +1,8 @@
 #include "bau_systemB.h"
-#include "bits.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "logger.h"
 #include <string.h>
-#include <stdio.h>
 
 enum NmReadSerialNumberType
 {
@@ -17,10 +16,10 @@ static constexpr auto kFunctionPropertyResultBufferMaxSize = 0xFF;
 static constexpr auto kRestartProcessTime = 3;
 
 BauSystemB::BauSystemB(Platform& platform): _memory(platform, _deviceObj),
-    _appProgram(_memory),
+    _appProgramObj(_memory),
     _platform(platform)
 {
-    _memory.addSaveRestore(&_appProgram);
+    _memory.addSaveRestore(&_appProgramObj);
 }
 
 void BauSystemB::readMemory()
@@ -40,7 +39,7 @@ Platform& BauSystemB::platform()
 
 ApplicationProgramObject& BauSystemB::parameters()
 {
-    return _appProgram;
+    return _appProgramObj;
 }
 
 DeviceObject& BauSystemB::deviceObject()
@@ -57,56 +56,55 @@ uint8_t BauSystemB::checkmasterResetValidity(EraseCode eraseCode, uint8_t channe
     {
         case EraseCode::ConfirmedRestart:
         {
-            println("Confirmed restart requested.");
+            knxLogInfo<KNX_LOG_BAU>("Confirmed restart requested.\n");
             return successCode;
         }
 
         case EraseCode::ResetAP:
         {
             // TODO: increase download counter except for confirmed restart (PID_DOWNLOAD_COUNTER)
-            println("ResetAP requested. Not implemented yet.");
+            knxLogInfo<KNX_LOG_BAU>("ResetAP requested. Not implemented yet.\n");
             return successCode;
         }
 
         case EraseCode::ResetIA:
         {
             // TODO: increase download counter except for confirmed restart (PID_DOWNLOAD_COUNTER)
-            println("ResetIA requested. Not implemented yet.");
+            knxLogInfo<KNX_LOG_BAU>("ResetIA requested. Not implemented yet.\n");
             return successCode;
         }
 
         case EraseCode::ResetLinks:
         {
             // TODO: increase download counter except for confirmed restart (PID_DOWNLOAD_COUNTER)
-            println("ResetLinks requested. Not implemented yet.");
+            knxLogInfo<KNX_LOG_BAU>("ResetLinks requested. Not implemented yet.\n");
             return successCode;
         }
 
         case EraseCode::ResetParam:
         {
             // TODO: increase download counter except for confirmed restart (PID_DOWNLOAD_COUNTER)
-            println("ResetParam requested. Not implemented yet.");
+            knxLogInfo<KNX_LOG_BAU>("ResetParam requested. Not implemented yet.\n");
             return successCode;
         }
 
         case EraseCode::FactoryReset:
         {
             // TODO: increase download counter except for confirmed restart (PID_DOWNLOAD_COUNTER)
-            println("Factory reset requested. type: with IA");
+            knxLogInfo<KNX_LOG_BAU>("Factory reset requested. type: with IA\n");
             return successCode;
         }
 
         case EraseCode::FactoryResetWithoutIA:
         {
             // TODO: increase download counter except for confirmed restart (PID_DOWNLOAD_COUNTER)
-            println("Factory reset requested. type: without IA");
+            knxLogInfo<KNX_LOG_BAU>("Factory reset requested. type: without IA\n");
             return successCode;
         }
 
         default:
         {
-            print("Unhandled erase code: ");
-            println(eraseCode, HEX);
+            knxLogInfo<KNX_LOG_BAU>("Unhandled erase code: 0x%02X\n", static_cast<unsigned int>(eraseCode));
             return invalidEraseCode;
         }
     }
@@ -124,17 +122,15 @@ void BauSystemB::deviceDescriptorReadIndication(Priority priority, HopCountType 
 void BauSystemB::memoryRouterWriteIndication(Priority priority, HopCountType hopType, uint16_t asap, const SecurityControl& secCtrl, uint8_t number,
         uint16_t memoryAddress, uint8_t* data)
 {
-    print("Writing memory at: ");
-    print(memoryAddress, HEX);
-    print(" length: ");
-    print(number);
-    print(" data: ");
-    printHex("=>", data, number);
+	knxLogInfo<KNX_LOG_BAU>("Writing memory at: %p", memoryAddress);
+    knxLogInfo<KNX_LOG_BAU>(" length: %u", number);
+    knxLogInfo<KNX_LOG_BAU>(" data: ");
+    knxLogHexInfo<KNX_LOG_BAU>("=>", data, number);
     _memory.writeMemory(memoryAddress, number, data);
 
     if (_deviceObj.verifyMode())
     {
-        print("Sending Read indication");
+        knxLogInfo<KNX_LOG_BAU>("Sending Read indication");
         memoryRouterReadIndication(priority, hopType, asap, secCtrl, number, memoryAddress, data);
     }
 }
@@ -156,12 +152,11 @@ void BauSystemB::memoryRoutingTableReadIndication(Priority priority, HopCountTyp
 
 void BauSystemB::memoryRoutingTableWriteIndication(Priority priority, HopCountType hopType, uint16_t asap, const SecurityControl& secCtrl, uint8_t number, uint16_t memoryAddress, uint8_t* data)
 {
-    print("Writing memory at: ");
-    print(memoryAddress, HEX);
-    print(" length: ");
-    print(number);
-    print(" data: ");
-    printHex("=>", data, number);
+    knxLogInfo<KNX_LOG_BAU>("Writing memory at: %p", memoryAddress);
+    knxLogInfo<KNX_LOG_BAU>(" length: %u", number);
+    knxLogInfo<KNX_LOG_BAU>(" data: ");
+    knxLogHexInfo<KNX_LOG_BAU>("=>", data, number);
+
     _memory.writeMemory(memoryAddress, number, data);
 
     if (_deviceObj.verifyMode())
@@ -205,14 +200,14 @@ void BauSystemB::memoryExtReadIndication(Priority priority, HopCountType hopType
 void BauSystemB::doMasterReset(EraseCode eraseCode, uint8_t channel)
 {
     _deviceObj.masterReset(eraseCode, channel);
-    _appProgram.masterReset(eraseCode, channel);
+    _appProgramObj.masterReset(eraseCode, channel);
 }
 
 void BauSystemB::restartRequestIndication(Priority priority, HopCountType hopType, uint16_t asap, const SecurityControl& secCtrl, RestartType restartType, EraseCode eraseCode, uint8_t channel)
 {
     if (restartType == RestartType::BasicRestart)
     {
-        println("Basic restart requested");
+        knxLogInfo<KNX_LOG_BAU>("Basic restart requested\n");
 
         if (_beforeRestart != 0)
             _beforeRestart();
@@ -228,7 +223,7 @@ void BauSystemB::restartRequestIndication(Priority priority, HopCountType hopTyp
     else
     {
         // Cannot happen as restartType is just one bit
-        println("Unhandled restart type.");
+        knxLogInfo<KNX_LOG_BAU>("Unhandled restart type.\n");
         _platform.fatalError();
     }
 
@@ -281,13 +276,13 @@ void BauSystemB::propertyExtDescriptionReadIndication(Priority priority, HopCoun
 
     if (propertyId > 0xFF || propertyIndex > 0xFF)
     {
-        println("BauSystemB::propertyExtDescriptionReadIndication: propertyId or Idx > 256 are not supported");
+        knxLogInfo<KNX_LOG_BAU>("BauSystemB::propertyExtDescriptionReadIndication: propertyId or Idx > 256 are not supported\n");
         return;
     }
 
     if (descriptionType != 0)
     {
-        println("BauSystemB::propertyExtDescriptionReadIndication: only descriptionType 0 supported");
+        knxLogInfo<KNX_LOG_BAU>("BauSystemB::propertyExtDescriptionReadIndication: only descriptionType 0 supported\n");
         return;
     }
 
@@ -339,14 +334,16 @@ void BauSystemB::propertyValueReadIndication(Priority priority, HopCountType hop
     uint8_t size = 0;
     uint8_t elementCount = numberOfElements;
 #ifdef LOG_KNX_PROP
-    print("propertyValueReadIndication: ObjIdx ");
-    print(objectIndex);
-    print(" propId ");
-    print(propertyId);
-    print(" num ");
-    print(numberOfElements);
-    print(" start ");
-    print(startIndex);
+    // print("propertyValueReadIndication: ObjIdx ");
+    // print(objectIndex);
+    // print(" propId ");
+    // print(propertyId);
+    // print(" num ");
+    // print(numberOfElements);
+    // print(" start ");
+    // print(startIndex);
+    knxLogInfo<KNX_LOG_BAU>("propertyValueReadIndication: ObjIdx %d propId %d num %d start %d",
+        objectIndex, propertyId, numberOfElements, startIndex);
 #endif
 
     InterfaceObject* obj = getInterfaceObject(objectIndex);
@@ -619,7 +616,7 @@ void BauSystemB::individualAddressSerialNumberReadIndication(Priority priority, 
     }
 }
 
-void BauSystemB::addSaveRestore(SaveRestore* obj)
+void BauSystemB::addSaveRestore(InterfaceObject* obj)
 {
     _memory.addSaveRestore(obj);
 }

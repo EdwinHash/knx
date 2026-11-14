@@ -3,8 +3,7 @@
 
 #include "bau07B0.h"
 #include "bits.h"
-#include <string.h>
-#include <stdio.h>
+#include "logger.h"
 
 using namespace std;
 
@@ -44,6 +43,12 @@ Bau07B0::Bau07B0(Platform& platform)
 #endif
 }
 
+void Bau07B0::rtosInitialize()
+{
+	BauSystemBDevice::rtosInitialize();
+	_dlLayer.rtosInitialize();
+}
+
 InterfaceObject* Bau07B0::getInterfaceObject(uint8_t idx)
 {
     switch (idx)
@@ -61,7 +66,7 @@ InterfaceObject* Bau07B0::getInterfaceObject(uint8_t idx)
             return &_groupObjTable;
 
         case 4:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case 5: // would be app_program 2
             return nullptr;
@@ -108,7 +113,7 @@ InterfaceObject* Bau07B0::getInterfaceObject(ObjectType objectType, uint16_t obj
             return &_groupObjTable;
 
         case OT_APPLICATION_PROG:
-            return &_appProgram;
+            return &_appProgramObj;
 #ifdef USE_DATASECURE
 
         case OT_SECURITY:
@@ -165,7 +170,7 @@ TPAckType Bau07B0::isAckRequired(uint16_t address, bool isGrpAddr)
 
     if (address == 0)
     {
-        println("Invalid broadcast detected: destination address is 0, but address type is \"individual\"");
+        knxLogWarn<KNX_LOG_BAU>("Invalid broadcast detected: destination address is 0, but address type is \"individual\"\n");
     }
 
     return TPAckType::AckReqNone;
@@ -175,4 +180,10 @@ TpUartDataLinkLayer* Bau07B0::getDataLinkLayer()
 {
     return (TpUartDataLinkLayer*)&_dlLayer;
 }
+
+bool Bau07B0::isTxQueueFull()
+{
+	return _dlLayer.isTxQueueFull();
+}
+
 #endif

@@ -12,6 +12,7 @@ class Bau07B0 : public BauSystemBDevice, public ITpUartCallBacks, public DataLin
 {
     public:
         Bau07B0(Platform& platform);
+        virtual void rtosInitialize();
         void loop() override;
         bool enabled() override;
         void enabled(bool value) override;
@@ -23,6 +24,7 @@ class Bau07B0 : public BauSystemBDevice, public ITpUartCallBacks, public DataLin
 
         // For TP1 only
         TPAckType isAckRequired(uint16_t address, bool isGrpAddr) override;
+        bool isTxQueueFull() override;
 
     private:
         TpUartDataLinkLayer _dlLayer;

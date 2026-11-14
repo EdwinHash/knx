@@ -20,9 +20,12 @@ class BauSystemBDevice : public BauSystemB
 {
     public:
         BauSystemBDevice(Platform& platform);
+        ~BauSystemBDevice();
+        virtual void rtosInitialize();
         void loop() override;
         bool configured() override;
         GroupObjectTableObject& groupObjectTable();
+        void grTelegrCounterReset();
 
     protected:
         ApplicationLayer& applicationLayer() override;
@@ -54,4 +57,7 @@ class BauSystemBDevice : public BauSystemB
         NetworkLayerDevice _netLayer;
 
         bool _configured = true;
+    private:
+        TimerHandle_t _hGrTelegrCntResetTimer = nullptr;
+        uint16_t _grTelegrCnt = 0U;
 };

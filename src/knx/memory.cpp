@@ -3,6 +3,7 @@
 #include "task.h"
 #include <string.h>
 #include "bits.h"
+#include "logger.h"
 
 Memory::Memory(Platform& platform, DeviceObject& deviceObject)
     : _platform(platform), _deviceObject(deviceObject)
@@ -13,14 +14,14 @@ Memory::~Memory()
 
 void Memory::readMemory()
 {
-    println("readMemory");
+    knxLogInfo<KNX_LOG_MEM>("readMemory\n");
 
     uint8_t* flashStart = _platform.getNonVolatileMemoryStart();
     size_t flashSize = _platform.getNonVolatileMemorySize();
 
     if (flashStart == nullptr)
     {
-        println("no user flash available;");
+        knxLogWarn<KNX_LOG_MEM>("no user flash available;\n");
         return;
     }
 

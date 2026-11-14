@@ -165,11 +165,11 @@ void __isr __time_critical_func(TpUartDataLinkLayer::processRx)(bool isr)
      * Theoretically, you could now discard the buffer, but then a valid frame may be lost.
      * Therefore, only one piece of information is output later in the loop and byte processing "tries" to respond to it.
      */
-    if (_platform.overflowUart())
+    if (_platform.overflowUart(USART1))
         _rxOverflow = true;
 
     // process data
-    while (_platform.uartAvailable())
+    while (_platform.uartAvailable(USART1))
     {
         processRxByte();
     }
@@ -182,7 +182,7 @@ void __isr __time_critical_func(TpUartDataLinkLayer::processRx)(bool isr)
  */
 void TpUartDataLinkLayer::processRxByte()
 {
-    int byte = _platform.readUart();
+    int byte = _platform.readUart(USART1);
 
     // RxBuffer empty
     if (byte < 0)
@@ -194,7 +194,7 @@ void TpUartDataLinkLayer::processRxByte()
      * and there are no more bytes in the buffer,
      * then I can discard the INVALID state.
      */
-    if (_rxState == RX_INVALID && (xTaskGetTickCount() - _rxLastTime) > 2 && !_platform.uartAvailable())
+    if (_rxState == RX_INVALID && (xTaskGetTickCount() - _rxLastTime) > 2 && !_platform.uartAvailable(USART1))
     {
         processRxFrameComplete();
         _rxState = RX_IDLE;
@@ -260,7 +260,7 @@ void TpUartDataLinkLayer::processRxByte()
          */
         if (_txState == TX_IDLE)
         {
-            _platform.writeUart(U_ACK_REQ);
+            _platform.writeUart(USART1, U_ACK_REQ);
         }
     }
     else
@@ -429,7 +429,7 @@ void TpUartDataLinkLayer::processRxFrameByte(uint8_t byte)
                         _rxFrame->addFlags(TP_FRAME_FLAG_ACK);
 
                         // and in the TPUart so that it can send the ACK
-                        _platform.writeUart(U_ACK_REQ | ack);
+                        _platform.writeUart(USART1, U_ACK_REQ | ack);
                     }
                 }
             }
@@ -444,7 +444,7 @@ void TpUartDataLinkLayer::processRxFrameByte(uint8_t byte)
                     // Only if I am not sending myself
                     if (_txState == TX_IDLE)
                     {
-                        _platform.writeUart(U_ACK_REQ | U_ACK_REQ_ADRESSED | U_ACK_REQ_BUSY);
+                        _platform.writeUart(USART1, U_ACK_REQ | U_ACK_REQ_ADRESSED | U_ACK_REQ_BUSY);
                     }
                 }
             }
@@ -637,13 +637,13 @@ void TpUartDataLinkLayer::requestState(bool force /* = false */)
 
     // Send configuration or mode
     if (_monitoring)
-        _platform.writeUart(U_BUSMON_REQ);
+        _platform.writeUart(USART1, U_BUSMON_REQ);
     else
         requestConfig();
 
     // Question status on - if monitoring inactive
     if (!_monitoring)
-        _platform.writeUart(U_STATE_REQ);
+        _platform.writeUart(USART1, U_STATE_REQ);
 
     _lastStateRequest = xTaskGetTickCount();
 }
@@ -656,30 +656,30 @@ void TpUartDataLinkLayer::requestConfig()
     // println("requestConfig");
 #ifdef NCN5120
     if (markerMode())
-        _platform.writeUart(U_CONFIGURE_REQ | U_CONFIGURE_MARKER_REQ);
+        _platform.writeUart(USART1, U_CONFIGURE_REQ | U_CONFIGURE_MARKER_REQ);
 
 #endif
 
     // Set Address for AutoACK Unicast
     const uint16_t address = _deviceObject.individualAddress();
-    _platform.writeUart(U_SET_ADDRESS_REQ);
-    _platform.writeUart((address >> 8) & 0xFF);
-    _platform.writeUart(address & 0xFF);
+    _platform.writeUart(USART1, U_SET_ADDRESS_REQ);
+    _platform.writeUart(USART1, (address >> 8) & 0xFF);
+    _platform.writeUart(USART1, address & 0xFF);
 #ifdef NCN5120
-    _platform.writeUart(0xFF); // Dummy Byte needed by NCN only
+    _platform.writeUart(USART1, 0xFF); // Dummy Byte needed by NCN only
 #endif
 
     // Deviating Config
     if (_repetitions != 0b00110011)
     {
 #ifdef NCN5120
-        _platform.writeUart(U_SET_REPETITION_REQ);
-        _platform.writeUart(_repetitions);
-        _platform.writeUart(0x0); // dummy, see NCN5120 datasheet
-        _platform.writeUart(0x0); // dummy, see NCN5120 datasheet
+        _platform.writeUart(USART1, U_SET_REPETITION_REQ);
+        _platform.writeUart(USART1, _repetitions);
+        _platform.writeUart(USART1, 0x0); // dummy, see NCN5120 datasheet
+        _platform.writeUart(USART1, 0x0); // dummy, see NCN5120 datasheet
 #else
-        _platform.writeUart(U_MXRSTCNT);
-        _platform.writeUart(((_repetitions & 0xF0) << 1) | (_repetitions & 0x0F));
+        _platform.writeUart(USART1, U_MXRSTCNT);
+        _platform.writeUart(USART1, ((_repetitions & 0xF0) << 1) | (_repetitions & 0x0F));
 #endif
     }
 }
@@ -708,8 +708,8 @@ void TpUartDataLinkLayer::isrUnlock()
 void TpUartDataLinkLayer::clearUartBuffer()
 {
     // Clear rx queue
-    while (_platform.uartAvailable())
-        _platform.readUart();
+    while (_platform.uartAvailable(USART1))
+        _platform.readUart(USART1);
 }
 
 void TpUartDataLinkLayer::connected(bool state /* = true */)
@@ -738,7 +738,7 @@ bool TpUartDataLinkLayer::reset()
     // println("Reset TP");
     if (!_initialized)
     {
-        _platform.setupUart();
+        _platform.setupUart(USART1);
         _initialized = true;
     }
 
@@ -763,7 +763,7 @@ bool TpUartDataLinkLayer::reset()
 
     clearUartBuffer();
 
-    _platform.writeUart(U_RESET_REQ);
+    _platform.writeUart(USART1, U_RESET_REQ);
     bool success = false;
 
     const uint32_t start = xTaskGetTickCount();
@@ -771,7 +771,7 @@ bool TpUartDataLinkLayer::reset()
     // During startup answer took up to 2ms and normal 1ms
     do
     {
-        const int byte = _platform.readUart();
+        const int byte = _platform.readUart(USART1);
 
         if (byte == -1)
             continue; // empty
@@ -807,9 +807,9 @@ void TpUartDataLinkLayer::stop(bool state)
         return;
 
     if (state && !_stopped)
-        _platform.writeUart(U_STOP_MODE_REQ);
+        _platform.writeUart(USART1, U_STOP_MODE_REQ);
     else if (!state && _stopped)
-        _platform.writeUart(U_EXIT_STOP_MODE_REQ);
+        _platform.writeUart(USART1, U_EXIT_STOP_MODE_REQ);
 
     _stopped = state;
 }
@@ -817,9 +817,9 @@ void TpUartDataLinkLayer::stop(bool state)
 void TpUartDataLinkLayer::requestBusy(bool state)
 {
     if (state && !_busy)
-        _platform.writeUart(U_SET_BUSY_REQ);
+        _platform.writeUart(USART1, U_SET_BUSY_REQ);
     else if (!state && _busy)
-        _platform.writeUart(U_QUIT_BUSY_REQ);
+        _platform.writeUart(USART1, U_QUIT_BUSY_REQ);
 
     _busy = state;
 }
@@ -831,7 +831,7 @@ void TpUartDataLinkLayer::monitor()
 
     // println("busmonitor");
     _monitoring = true;
-    _platform.writeUart(U_BUSMON_REQ);
+    _platform.writeUart(USART1, U_BUSMON_REQ);
     resetStats();
 }
 
@@ -996,12 +996,12 @@ DptMedium TpUartDataLinkLayer::mediumType() const
 #ifdef NCN5120
 void TpUartDataLinkLayer::powerControl(bool state)
 {
-    _platform.writeUart(U_INT_REG_WR_REQ_ACR0);
+    _platform.writeUart(USART1, U_INT_REG_WR_REQ_ACR0);
 
     if (state)
-        _platform.writeUart(ACR0_FLAG_DC2EN | ACR0_FLAG_V20VEN | ACR0_FLAG_XCLKEN | ACR0_FLAG_V20VCLIMIT);
+        _platform.writeUart(USART1, ACR0_FLAG_DC2EN | ACR0_FLAG_V20VEN | ACR0_FLAG_XCLKEN | ACR0_FLAG_V20VCLIMIT);
     else
-        _platform.writeUart(ACR0_FLAG_XCLKEN | ACR0_FLAG_V20VCLIMIT);
+        _platform.writeUart(USART1, ACR0_FLAG_XCLKEN | ACR0_FLAG_V20VCLIMIT);
 }
 #endif
 
@@ -1026,15 +1026,15 @@ bool TpUartDataLinkLayer::processTxFrameBytes()
         if (offset)
         {
             // position++;
-            _platform.writeUart(U_L_DATA_OFFSET_REQ | offset);
+            _platform.writeUart(USART1, U_L_DATA_OFFSET_REQ | offset);
         }
 
         if (i == (_txFrame->size() - 1)) // Last bytes (checksum)
-            _platform.writeUart(U_L_DATA_END_REQ | position);
+            _platform.writeUart(USART1, U_L_DATA_END_REQ | position);
         else
-            _platform.writeUart(U_L_DATA_START_REQ | position);
+            _platform.writeUart(USART1, U_L_DATA_START_REQ | position);
 
-        _platform.writeUart(_txFrame->data(i));
+        _platform.writeUart(USART1, _txFrame->data(i));
     }
 
 #ifdef KNX_ACTIVITYCALLBACK

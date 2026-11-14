@@ -80,7 +80,7 @@ InterfaceObject* Bau2920::getInterfaceObject(uint8_t idx)
             return &_rtObjSecondary;
 
         case 3:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case 4:
             return &_rfMediumObject;
@@ -121,7 +121,7 @@ InterfaceObject* Bau2920::getInterfaceObject(ObjectType objectType, uint16_t obj
             return objectInstance == 0 ? &_rtObjPrimary : &_rtObjSecondary;
 
         case OT_APPLICATION_PROG:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case OT_RF_MEDIUM:
             return &_rfMediumObject;

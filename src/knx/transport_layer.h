@@ -5,6 +5,8 @@
 #include "tpdu.h"
 #include "address_table_object.h"
 #include "cemi_frame.h"
+#include "FreeRTOS.h"
+#include "timers.h"
 
 class ApplicationLayer;
 class APDU;
@@ -17,6 +19,8 @@ class TransportLayer
 {
     public:
         TransportLayer(ApplicationLayer& layer);
+        ~TransportLayer();
+        void rtosInitialize();
         void networkLayer(NetworkLayer& layer);
         void groupAddressTable(AddressTableObject& addrTable);
 
@@ -66,6 +70,8 @@ class TransportLayer
         void connectionTimeoutIndication();
         void ackTimeoutIndication();
         void loop();
+        void connectionTimeout();
+        void ackTimeout();
         #pragma endregion
 
     private:
@@ -103,14 +109,14 @@ class TransportLayer
         void disableConnectionTimeout();
         void enableAckTimeout();
         void disableAckTimeout();
+        TimerHandle_t _connTimeoutTimer = NULL;
+        TimerHandle_t _ackTimeoutTimer  = NULL;
         uint16_t _connectionAddress = 0;
         uint8_t _seqNoSend = 0;
         uint8_t _seqNoRecv = 0;
-        bool _connectionTimeoutEnabled = false;
-        uint32_t _connectionTimeoutStartMillis = 0;
+        bool _connectionTimeout = false;
         uint16_t _connectionTimeoutMillis = 6000;
-        bool _ackTimeoutEnabled = false;
-        uint32_t _ackTimeoutStartMillis = 0;
+        bool _ackTimeout = false;
         uint16_t _ackTimeoutMillis = 3000;
         uint8_t _repCount = 0;
         uint8_t _maxRepCount = 3;

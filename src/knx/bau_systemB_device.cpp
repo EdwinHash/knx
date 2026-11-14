@@ -1,7 +1,10 @@
+
 #include "bau_systemB_device.h"
 #include "bits.h"
 #include <string.h>
 #include <stdio.h>
+
+static void grTelegrCounterResetCallback(TimerHandle_t xTimer);
 
 BauSystemBDevice::BauSystemBDevice(Platform& platform) :
     BauSystemB(platform),
@@ -29,6 +32,17 @@ BauSystemBDevice::BauSystemBDevice(Platform& platform) :
 #ifdef USE_DATASECURE
     _memory.addSaveRestore(&_secIfObj);
 #endif
+}
+
+BauSystemBDevice::~BauSystemBDevice()
+{
+	xTimerDelete(_hGrTelegrCntResetTimer, 0);
+}
+
+void BauSystemBDevice::rtosInitialize()
+{
+	_transLayer.rtosInitialize();
+	_hGrTelegrCntResetTimer = xTimerCreate("GrTlgrLimits", 1, pdFALSE, this, grTelegrCounterResetCallback);
 }
 
 ApplicationLayer& BauSystemBDevice::applicationLayer()
@@ -161,7 +175,7 @@ bool BauSystemBDevice::configured()
     _configured = _groupObjTable.loadState() == LS_LOADED
                   && _addrTable.loadState() == LS_LOADED
                   && _assocTable.loadState() == LS_LOADED
-                  && _appProgram.loadState() == LS_LOADED;
+                  && _appProgramObj.loadState() == LS_LOADED;
 
 #ifdef USE_DATASECURE
     _configured &= _secIfObj.loadState() == LS_LOADED;
@@ -259,4 +273,14 @@ void BauSystemBDevice::groupValueWriteIndication(uint16_t asap, Priority priorit
         return;
 
     updateGroupObject(go, data, dataLength);
+}
+
+void BauSystemBDevice::grTelegrCounterReset()
+{
+	_grTelegrCnt = 0U;
+}
+
+static void grTelegrCounterResetCallback(TimerHandle_t xTimer)
+{
+	static_cast<BauSystemBDevice*>(pvTimerGetTimerID(xTimer))->grTelegrCounterReset();
 }

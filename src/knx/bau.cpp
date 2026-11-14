@@ -390,3 +390,8 @@ FunctionPropertyCallback BusAccessUnit::functionPropertyStateCallback()
 {
     return 0;
 }
+
+bool BusAccessUnit::isTxQueueFull()
+{
+    return true;
+}

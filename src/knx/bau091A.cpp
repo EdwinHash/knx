@@ -82,7 +82,7 @@ InterfaceObject* Bau091A::getInterfaceObject(uint8_t idx)
             return &_routerObj;
 
         case 2:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case 3:
             return &_ipParameters;
@@ -123,7 +123,7 @@ InterfaceObject* Bau091A::getInterfaceObject(ObjectType objectType, uint16_t obj
             return &_routerObj;
 
         case OT_APPLICATION_PROG:
-            return &_appProgram;
+            return &_appProgramObj;
 
         case OT_IP_PARAMETER:
             return &_ipParameters;

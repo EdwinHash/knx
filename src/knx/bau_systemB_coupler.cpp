@@ -42,7 +42,7 @@ bool BauSystemBCoupler::configured()
     if (!_configured)
         return false;
 
-    _configured = _appProgram.loadState() == LS_LOADED;
+    _configured = _appProgramObj.loadState() == LS_LOADED;
 #ifdef USE_DATASECURE
     _configured &= _secIfObj.loadState() == LS_LOADED;
 #endif

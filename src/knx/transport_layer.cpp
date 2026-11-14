@@ -3,16 +3,26 @@
 #include "cemi_frame.h"
 #include "network_layer.h"
 #include "application_layer.h"
-#include "platform.h"
-#include "bits.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include <stdio.h>
+
+static void ConnectionTimeoutCallback(TimerHandle_t xTimer);
+static void AckTimeoutCallback(TimerHandle_t xTimer);
 
 TransportLayer::TransportLayer(ApplicationLayer& layer): _savedFrame(0),
     _savedFrameConnecting(0), _applicationLayer(layer)
 {
     _currentState = Closed;
+}
+
+TransportLayer::~TransportLayer()
+{
+	xTimerDelete(_connTimeoutTimer, 0);
+	xTimerDelete(_ackTimeoutTimer, 0);
+}
+
+void TransportLayer::rtosInitialize()
+{
+    _connTimeoutTimer = xTimerCreate("ConnTimeout", pdMS_TO_TICKS(_connectionTimeoutMillis), pdFALSE, this, ConnectionTimeoutCallback);
+    _ackTimeoutTimer  = xTimerCreate("AckTimeout", pdMS_TO_TICKS(_ackTimeoutMillis), pdFALSE, this, AckTimeoutCallback);
 }
 
 void TransportLayer::networkLayer(NetworkLayer& layer)
@@ -609,14 +619,10 @@ uint16_t TransportLayer::getConnectionAddress()
 
 void TransportLayer::loop()
 {
-    uint32_t milliseconds = xTaskGetTickCount();
-
-    if (_connectionTimeoutEnabled
-            && (milliseconds - _connectionTimeoutStartMillis) > _connectionTimeoutMillis)
+    if (_connectionTimeout)
         connectionTimeoutIndication();
 
-    if (_ackTimeoutEnabled
-            && (milliseconds - _ackTimeoutStartMillis) > _ackTimeoutMillis)
+    if (_ackTimeout)
         ackTimeoutIndication();
 
     if (_savedConnectingValid)
@@ -780,22 +786,45 @@ void TransportLayer::A15(Priority priority, uint16_t tsap)
 
 void TransportLayer::enableConnectionTimeout()
 {
-    _connectionTimeoutStartMillis = xTaskGetTickCount();
-    _connectionTimeoutEnabled = true;
+    _connectionTimeout = false;
+	xTimerChangePeriod(_connTimeoutTimer, pdMS_TO_TICKS(_connectionTimeoutMillis), 0);
 }
 
 void TransportLayer::disableConnectionTimeout()
 {
-    _connectionTimeoutEnabled = false;
+    _connectionTimeout = false;
+	xTimerStop(_connTimeoutTimer, 0);
+}
+
+void TransportLayer::connectionTimeout()
+{
+    _connectionTimeout = true;
 }
 
 void TransportLayer::enableAckTimeout()
 {
-    _ackTimeoutStartMillis = xTaskGetTickCount();
-    _ackTimeoutEnabled = true;
+    //_ackTimeoutStartMillis = millis();
+    _ackTimeout = false;
+    xTimerChangePeriod(_ackTimeoutTimer, pdMS_TO_TICKS(_ackTimeoutMillis), 0);
 }
 
 void TransportLayer::disableAckTimeout()
 {
-    _ackTimeoutEnabled = false;
+    _ackTimeout = false;
+    xTimerStop(_ackTimeoutTimer, 0);
+}
+
+void TransportLayer::ackTimeout()
+{
+	_ackTimeout = true;
+}
+
+static void ConnectionTimeoutCallback(TimerHandle_t xTimer)
+{
+	static_cast<TransportLayer*>(pvTimerGetTimerID(xTimer))->connectionTimeout();
+}
+
+static void AckTimeoutCallback(TimerHandle_t xTimer)
+{
+	static_cast<TransportLayer*>(pvTimerGetTimerID(xTimer))->ackTimeout();
 }
